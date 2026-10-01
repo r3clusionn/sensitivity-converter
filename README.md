@@ -57,6 +57,8 @@ ow2            3.2086 sens at 800 DPI =   53.97 cm/360
 | `--from-fov`, `--to-fov` | Horizontal FOV in degrees. Games with a fixed FOV supply it; others need the flag. |
 | `--games FILE` | Use your own games file. |
 
+![The command line converting a Counter-Strike 2 sensitivity to Valorant by cm/360 and to Overwatch 2 with FOV matching](docs/images/cli.png)
+
 ## How it works
 
 A game turns `yaw * sensitivity` degrees per mouse count, so one 360 degree turn takes
