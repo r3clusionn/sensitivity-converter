@@ -1,0 +1,29 @@
+[package]
+name = "sensconv"
+version = "0.1.0"
+edition = "2021"
+description = "Convert mouse sensitivity between games using yaw values, cm/360 and FOV matching."
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "sensconv"
+required-features = ["cli"]
+
+[features]
+default = ["cli"]
+cli = ["data", "dep:clap"]
+data = ["dep:serde", "dep:serde_json"]
+
+[dependencies]
+clap = { version = "4", features = ["derive"], optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
+serde_json = { version = "1", optional = true }
+
+[profile.release]
+opt-level = "s"
+lto = true
+panic = "abort"
+strip = true

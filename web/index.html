@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sensitivity converter</title>
+<style>
+  :root { --bg:#14161a; --panel:#1d2026; --line:#2c313a; --text:#e6e8eb; --dim:#9aa3af; --accent:#6aa9ff; --bad:#ff7b72; }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f5f6f8; --panel:#fff; --line:#d9dde3; --text:#1b1f24; --dim:#5b6573; --accent:#1f6feb; --bad:#cf222e; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui,Segoe UI,sans-serif; }
+  main { max-width:620px; margin:0 auto; padding:32px 16px 48px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  p.lead { color:var(--dim); margin:0 0 24px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; margin-bottom:16px; }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  label { display:block; font-size:13px; color:var(--dim); margin-bottom:4px; }
+  select, input { width:100%; padding:8px 10px; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; font:inherit; }
+  select:focus, input:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  .field { margin-bottom:12px; }
+  .result { font-size:28px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .sub { color:var(--dim); font-variant-numeric:tabular-nums; }
+  .err { color:var(--bad); }
+  .hide { display:none; }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  td { padding:4px 0; }
+  td:last-child { text-align:right; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Sensitivity converter</h1>
+  <p class="lead">Same hand movement, different game. Conversion runs in your browser through a small WebAssembly module.</p>
+
+  <div class="panel">
+    <div class="row">
+      <div class="field"><label for="from">From</label><select id="from"></select></div>
+      <div class="field"><label for="to">To</label><select id="to"></select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="sens">Sensitivity</label><input id="sens" type="number" step="any" min="0" value="1"></div>
+      <div class="field"><label for="dpi">DPI</label><input id="dpi" type="number" step="any" min="1" value="800"></div>
+    </div>
+    <div class="field"><label for="method">Method</label>
+      <select id="method">
+        <option value="0">Same cm/360</option>
+        <option value="1">Match a screen point (needs FOV)</option>
+      </select>
+    </div>
+    <div id="fovbox" class="hide">
+      <div class="row">
+        <div class="field"><label for="ffov">From horizontal FOV</label><input id="ffov" type="number" step="any" value="106.26"></div>
+        <div class="field"><label for="tfov">To horizontal FOV</label><input id="tfov" type="number" step="any" value="103"></div>
+      </div>
+      <div class="field"><label for="coef">Match point: <span id="coefv">75</span>% (0 is centre, 100 is edge)</label>
+        <input id="coef" type="range" min="0" max="100" value="75"></div>
+    </div>
+  </div>
+
+  <div class="panel" aria-live="polite">
+    <div class="sub" id="label">Converted sensitivity</div>
+    <div class="result" id="out">-</div>
+    <table>
+      <tr><td class="sub">Source</td><td id="srccm">-</td></tr>
+      <tr><td class="sub">Destination</td><td id="dstcm">-</td></tr>
+    </table>
+    <div class="err" id="err"></div>
+  </div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let wasm, games = [];
+
+function selectedGame(id) { return games.find(g => g.id === $(id).value); }
+
+function recalc() {
+  const from = selectedGame('from'), to = selectedGame('to');
+  const sens = parseFloat($('sens').value), dpi = parseFloat($('dpi').value);
+  const method = parseInt($('method').value, 10);
+  $('fovbox').classList.toggle('hide', method === 0);
+  $('coefv').textContent = $('coef').value;
+  $('err').textContent = '';
+  const v = wasm.sc_convert(from.yaw, to.yaw, sens, dpi, dpi, method,
+    parseFloat($('coef').value) / 100, parseFloat($('ffov').value), parseFloat($('tfov').value));
+  if (!Number.isFinite(v)) {
+    $('out').textContent = '-'; $('srccm').textContent = '-'; $('dstcm').textContent = '-';
+    $('err').textContent = 'Enter a positive sensitivity and DPI' + (method ? ', and FOVs between 0 and 180' : '') + '.';
+    return;
+  }
+  const src = wasm.sc_cm360(sens, dpi, from.yaw), dst = wasm.sc_cm360(v, dpi, to.yaw);
+  $('label').textContent = 'Sensitivity in ' + to.name;
+  $('out').textContent = v.toFixed(4);
+  $('srccm').textContent = src.toFixed(2) + ' cm/360';
+  $('dstcm').textContent = dst.toFixed(2) + ' cm/360';
+}
+
+function onGameChange(side) {
+  const g = selectedGame(side);
+  if (g.default_hfov) $(side === 'from' ? 'ffov' : 'tfov').value = g.default_hfov;
+  recalc();
+}
+
+async function init() {
+  try {
+    const [bytes, json] = await Promise.all([
+      fetch('sensconv.wasm').then(r => r.arrayBuffer()),
+      fetch('games.json').then(r => r.json()),
+    ]);
+    wasm = (await WebAssembly.instantiate(bytes)).instance.exports;
+    games = json;
+  } catch (e) {
+    $('err').textContent = 'Could not load the converter: ' + e.message + '. Serve this folder over HTTP (python -m http.server).';
+    return;
+  }
+  for (const id of ['from', 'to']) {
+    $(id).innerHTML = games.map(g => '<option value="' + g.id + '">' + g.name + '</option>').join('');
+  }
+  $('from').value = 'cs2'; $('to').value = 'valorant';
+  onGameChange('from'); onGameChange('to');
+  for (const id of ['sens', 'dpi', 'method', 'ffov', 'tfov', 'coef']) $(id).addEventListener('input', recalc);
+  $('from').addEventListener('change', () => onGameChange('from'));
+  $('to').addEventListener('change', () => onGameChange('to'));
+  recalc();
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+[
+  { "id": "cs2", "name": "Counter-Strike 2", "yaw": 0.022, "default_hfov": 106.26, "notes": "Source engine yaw. FOV is fixed at 90 on a 4:3 base, 106.26 horizontal at 16:9." },
+  { "id": "csgo", "name": "Counter-Strike: Global Offensive", "yaw": 0.022, "default_hfov": 106.26, "notes": "Source engine yaw." },
+  { "id": "tf2", "name": "Team Fortress 2", "yaw": 0.022, "notes": "Source engine yaw." },
+  { "id": "hl2", "name": "Half-Life 2", "yaw": 0.022, "notes": "Source engine yaw." },
+  { "id": "apex", "name": "Apex Legends", "yaw": 0.022, "notes": "Source engine yaw. Horizontal FOV is user selectable." },
+  { "id": "valorant", "name": "Valorant", "yaw": 0.07, "default_hfov": 103.0, "notes": "Fixed 103 horizontal FOV." },
+  { "id": "ow2", "name": "Overwatch 2", "yaw": 0.0066, "notes": "Horizontal FOV is user selectable (default 103)." },
+  { "id": "fortnite", "name": "Fortnite", "yaw": 0.005555555555555556, "notes": "X-axis sensitivity percent." },
+  { "id": "r6", "name": "Rainbow Six Siege", "yaw": 0.00572957795130823, "notes": "Base yaw only; the ADS multiplier is not applied." },
+  { "id": "cod", "name": "Call of Duty (MW, Warzone)", "yaw": 0.0066, "notes": "Base yaw only; ADS multipliers are not applied." },
+  { "id": "quake", "name": "Quake Champions", "yaw": 0.022, "notes": "id Tech yaw." },
+  { "id": "quakelive", "name": "Quake Live", "yaw": 0.022, "notes": "id Tech yaw." }
+]
